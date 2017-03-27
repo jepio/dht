@@ -2220,11 +2220,13 @@ dht_periodic(const void *buf, size_t buflen,
             break;
         case PUT:
             debugf("Put.\n");
+            new_node(id, from, fromlen, 1);
             print_put_request(buf, buflen, tid, &tid_len, id, token,
                               &token_len);
             break;
         case GET:
             debugf("Get.\n");
+            new_node(id, from, fromlen, 1);
             print_get_request(buf, buflen, tid, &tid_len, id, target);
             break;
         }
