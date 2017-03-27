@@ -238,7 +238,17 @@ struct storage {
     struct storage *next;
 };
 
+struct arbitrary {
+    unsigned char id[20];
+    unsigned char token[40];
+    int token_len;
+    unsigned char *v;
+    int v_len;
+    struct arbitrary *next;
+};
+
 static struct storage * find_storage(const unsigned char *id);
+static struct arbitrary * find_arbitrary(const unsigned char *id);
 static void flush_search_node(struct search_node *n, struct search *sr);
 
 static int send_ping(const struct sockaddr *sa, int salen,
@@ -332,7 +342,9 @@ static unsigned char oldsecret[8];
 static struct bucket *buckets = NULL;
 static struct bucket *buckets6 = NULL;
 static struct storage *storage;
+static struct arbitrary *arbitrary;
 static int numstorage;
+static int numarbitrary;
 
 static struct search *searches = NULL;
 static int numsearches;
@@ -1344,6 +1356,19 @@ find_storage(const unsigned char *id)
     return st;
 }
 
+static struct arbitrary *
+find_arbitrary(const unsigned char *id)
+{
+    struct arbitrary *arb = arbitrary;
+
+    while(arb) {
+        if(id_cmp(id, arb->id) == 0)
+            break;
+        arb = arb->next;
+    }
+    return arb;
+}
+
 static int
 storage_store(const unsigned char *id,
               const struct sockaddr *sa, unsigned short port)
@@ -1685,6 +1710,9 @@ dht_init(int s, int s6, const unsigned char *id, const unsigned char *v)
     storage = NULL;
     numstorage = 0;
 
+    arbitrary = NULL;
+    numarbitrary = 0;
+
     if(s >= 0) {
         buckets = calloc(sizeof(struct bucket), 1);
         if(buckets == NULL)
@@ -1789,6 +1817,13 @@ dht_uninit()
         storage = storage->next;
         free(st->peers);
         free(st);
+    }
+
+    while(arbitrary) {
+        struct arbitrary *arb = arbitrary;
+        arbitrary = arbitrary->next;
+        free(arb->v);
+        free(arb);
     }
 
     while(searches) {
