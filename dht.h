@@ -61,6 +61,9 @@ void dht_hash(void *hash_return, int hash_size,
               const void *v3, int len3);
 int dht_random_bytes(void *buf, size_t size);
 
+int dht_put(const char *str, size_t size, dht_callback *callback, void *closure);
+int dht_get(const unsigned char *target, dht_callback *callback, void *closure);
+
 #ifdef __cplusplus
 }
 #endif
