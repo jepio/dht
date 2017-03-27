@@ -278,9 +278,20 @@ static int send_error(const struct sockaddr *sa, int salen,
 #define FIND_NODE 3
 #define GET_PEERS 4
 #define ANNOUNCE_PEER 5
+#define PUT 6
+#define GET 7
 
 #define WANT4 1
 #define WANT6 2
+
+static void print_put_request(const unsigned char *buf, int buflen,
+                              unsigned char *tid_return, int *tid_len,
+                              unsigned char *id_return,
+                              unsigned char *token_return, int *token_len);
+static void print_get_request(const unsigned char *buf, int buflen,
+                              unsigned char *tid_return, int *tid_len,
+                              unsigned char *id_return,
+                              unsigned char *target_return);
 
 static int parse_message(const unsigned char *buf, int buflen,
                          unsigned char *tid_return, int *tid_len,
@@ -2171,6 +2182,16 @@ dht_periodic(const void *buf, size_t buflen,
                polluting the DHT. */
             debugf("Sending peer announced.\n");
             send_peer_announced(from, fromlen, tid, tid_len);
+            break;
+        case PUT:
+            debugf("Put.\n");
+            print_put_request(buf, buflen, tid, &tid_len, id, token,
+                              &token_len);
+            break;
+        case GET:
+            debugf("Get.\n");
+            print_get_request(buf, buflen, tid, &tid_len, id, target);
+            break;
         }
     }
 
@@ -2782,6 +2803,23 @@ dht_memmem(const void *haystack, size_t haystacklen,
 
 #endif
 
+static void print_put_request(const unsigned char *buf, int buflen,
+                              unsigned char *tid_return, int *tid_len,
+                              unsigned char *id_return,
+                              unsigned char *token_return, int *token_len)
+{
+
+
+}
+
+static void print_get_request(const unsigned char *buf, int buflen,
+                              unsigned char *tid_return, int *tid_len,
+                              unsigned char *id_return,
+                              unsigned char *target_return)
+{
+
+}
+
 static int
 parse_message(const unsigned char *buf, int buflen,
               unsigned char *tid_return, int *tid_len,
@@ -2989,6 +3027,10 @@ parse_message(const unsigned char *buf, int buflen,
         return GET_PEERS;
     if(dht_memmem(buf, buflen, "1:q13:announce_peer", 19))
        return ANNOUNCE_PEER;
+    if(dht_memmem(buf, buflen, "1:q3:put", 8))
+        return PUT;
+    if(dht_memmem(buf, buflen, "1:q3:get", 8))
+        return GET;
     return -1;
 
  overflow:
