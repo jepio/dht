@@ -2940,7 +2940,7 @@ static void print_get_request(const unsigned char *buf, int buflen,
 
 }
 
-static const unsigned char *find_end(const unsigned char *buf, const unsigned
+static const unsigned char *skip_any(const unsigned char *buf, const unsigned
         char *end);
 
 static const unsigned char *skip_int(const unsigned char *buf, const unsigned
@@ -2986,7 +2986,7 @@ static const unsigned char *skip_list(const unsigned char *buf, const unsigned
             p += 1;
             break;
         }
-        p = find_end(p, end);
+        p = skip_any(p, end);
     }
 
     if (p >= end) {
@@ -3039,7 +3039,7 @@ static const unsigned char *skip_dict(const unsigned char *buf, const unsigned
         p = skip_string(p, end);
         if (!p)
             return NULL;
-        p = find_end(p, end);
+        p = skip_any(p, end);
     }
     if (p >= end) {
         debugf("skip_dict: overflow.\n");
@@ -3049,7 +3049,7 @@ static const unsigned char *skip_dict(const unsigned char *buf, const unsigned
     return p;
 }
 
-static const unsigned char *find_end(const unsigned char *buf, const unsigned
+static const unsigned char *skip_any(const unsigned char *buf, const unsigned
         char *end)
 {
     const unsigned char *p = buf;
@@ -3084,7 +3084,7 @@ static int put_find_v(const unsigned char *buf, int buflen,
         debugf("put_find_v: Missing 'a' key.\n");
         return -1;
     }
-    pp = find_end(p + 4, buf + buflen);
+    pp = skip_any(p + 4, buf + buflen);
     if (pp) {
         debug_printable(p, pp - p);
     } else {
