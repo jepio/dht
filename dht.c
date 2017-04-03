@@ -3053,23 +3053,22 @@ static const unsigned char *skip_any(const unsigned char *buf, const unsigned
         char *end)
 {
     const unsigned char *p = buf;
-    while (p && p < end) {
-        switch (*p) {
-        case 'i':
-            p = skip_int(p+1, end);
-            break;
-        case 'l':
-            p = skip_list(p+1, end);
-            break;
-        case 'd':
-            p = skip_dict(p+1, end);
-            break;
-        default:
-            p = skip_string(p, end);
-        }
+    switch (*p) {
+    case 'i':
+        p = skip_int(p+1, end);
+        break;
+    case 'l':
+        p = skip_list(p+1, end);
+        break;
+    case 'd':
+        p = skip_dict(p+1, end);
+        break;
+    default:
+        p = skip_string(p, end);
     }
     return p;
 }
+
 static int put_find_v(const unsigned char *buf, int buflen,
         unsigned char *v_return, int v_len)
 {
