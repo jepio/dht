@@ -3003,15 +3003,15 @@ static const unsigned char *skip_string(const unsigned char *buf, const unsigned
         return NULL;
     }
 
-    while (p && p < end) {
-        char *q;
-        long l = strtol((char *)p, &q, 10);
-        if (q && *q == ':' && l >= 0) {
-            p = (unsigned char*)q+1+l;
-        } else {
-            debugf("skip_string: Failed to find proper string length.\n");
-            return NULL;
-        }
+    char *q;
+    long l = strtol((char *)p, &q, 10);
+    if (q && *q == ':' && l >= 0) {
+        p = (unsigned char*)q+1+l;
+    } else {
+        debugf("skip_string: Failed to find proper string length.\n");
+        debug_printable(p, p - buf);
+        debugf("\n");
+        return NULL;
     }
     if (p >= end) {
         debugf("skip_string: overflow.\n");
