@@ -2966,7 +2966,7 @@ static const unsigned char *skip_int(const unsigned char *buf, const unsigned
         debugf("skip_int: Invalid character in int: %d\n", *p);
         p = NULL;
     }
-    if (p >= end)
+    if (p > end)
         p = NULL;
 
     return p;
@@ -2989,7 +2989,7 @@ static const unsigned char *skip_list(const unsigned char *buf, const unsigned
         p = skip_any(p, end);
     }
 
-    if (p >= end) {
+    if (p > end) {
         debugf("skip_list: overflow\n");
         p = NULL;
     }
@@ -3015,7 +3015,7 @@ static const unsigned char *skip_string(const unsigned char *buf, const unsigned
         debugf("\n");
         return NULL;
     }
-    if (p >= end) {
+    if (p > end) {
         debugf("skip_string: overflow.\n");
         return NULL;
     }
@@ -3041,7 +3041,7 @@ static const unsigned char *skip_dict(const unsigned char *buf, const unsigned
             return NULL;
         p = skip_any(p, end);
     }
-    if (p >= end) {
+    if (p > end) {
         debugf("skip_dict: overflow.\n");
         return NULL;
     }
