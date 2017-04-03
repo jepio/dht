@@ -294,6 +294,8 @@ static int send_error(const struct sockaddr *sa, int salen,
 #define WANT4 1
 #define WANT6 2
 
+static int put_find_v(const unsigned char *buf, int buflen,
+        unsigned char *v_return, int v_len);
 static void print_put_request(const unsigned char *buf, int buflen,
                               unsigned char *tid_return, int *tid_len,
                               unsigned char *id_return,
@@ -2221,6 +2223,8 @@ dht_periodic(const void *buf, size_t buflen,
         case PUT:
             debugf("Put.\n");
             new_node(id, from, fromlen, 1);
+            put_find_v(buf, buflen, NULL, 0);
+
             print_put_request(buf, buflen, tid, &tid_len, id, token,
                               &token_len);
             break;
@@ -2855,6 +2859,160 @@ static void print_get_request(const unsigned char *buf, int buflen,
                               unsigned char *target_return)
 {
 
+}
+
+static const unsigned char *find_end(const unsigned char *buf, const unsigned
+        char *end);
+
+static const unsigned char *skip_int(const unsigned char *buf, const unsigned
+        char *end)
+{
+    const unsigned char *p = buf;
+    if (!p) {
+        debugf("skip_int: passed null.\n");
+        return NULL;
+    }
+    if (*p == '-')
+        p += 1;
+
+    while (p && p < end) {
+        if (isdigit(p)) {
+            ++p;
+            continue;
+        }
+        if (*p == 'e') {
+            ++p;
+            break;
+        }
+        debugf("skip_int: Invalid character in int: %d\n", *p);
+        p = NULL;
+    }
+    if (p >= end)
+        p = NULL;
+
+    return p;
+}
+
+static const unsigned char *skip_list(const unsigned char *buf, const unsigned
+        char *end)
+{
+    const unsigned char *p = buf;
+    if (!p) {
+        debugf("skip_list: passed null.\n");
+        return NULL;
+    }
+
+    while (p && p < end) {
+        if (*p == 'e') {
+            p += 1;
+            break;
+        }
+        p = find_end(p, end);
+    }
+
+    if (p >= end) {
+        debugf("skip_list: overflow\n");
+        p = NULL;
+    }
+
+    return p;
+}
+
+static const unsigned char *skip_string(const unsigned char *buf, const unsigned char* end)
+{
+    const unsigned char *p = buf;
+    if (!p) {
+        debugf("skip_string: passed null.\n");
+        return NULL;
+    }
+
+    while (p && p < end) {
+        char *q;
+        long l = strtol((char *)p, &q, 10);
+        if (q && *q == ':' && l >= 0) {
+            p = (unsigned char*)q+1+l;
+        } else {
+            debugf("skip_string: Failed to find proper string length.\n");
+            return NULL;
+        }
+    }
+    if (p >= end) {
+        debugf("skip_string: overflow.\n");
+        return NULL;
+    }
+
+    return p;
+}
+
+static const unsigned char *skip_dict(const unsigned char *buf, const unsigned
+        char *end)
+{
+    const unsigned char *p = buf;
+    if (!p) {
+        debugf("skip_string: passed null.\n");
+        return NULL;
+    }
+    while (p && p < end) {
+        if (*p == 'e') {
+            p += 1;
+            break;
+        }
+        p = skip_string(p, end);
+        if (!p)
+            return NULL;
+        p = find_end(p, end);
+    }
+    if (p >= end) {
+        debugf("skip_dict: overflow.\n");
+        return NULL;
+    }
+
+    return p;
+}
+
+static const unsigned char *find_end(const unsigned char *buf, const unsigned
+        char *end)
+{
+    const unsigned char *p = buf;
+    while (p && p < end) {
+        switch (*p) {
+        case 'i':
+            p = skip_int(p+1, end);
+            break;
+        case 'l':
+            p = skip_list(p+1, end);
+            break;
+        case 'd':
+            p = skip_dict(p+1, end);
+            break;
+        default:
+            p = skip_string(p, end);
+        }
+    }
+    return p;
+}
+static int put_find_v(const unsigned char *buf, int buflen,
+        unsigned char *v_return, int v_len)
+{
+    const unsigned char *p, *pp;
+    if (buf[buflen] != '\0') {
+        debugf("Eek! put_find_v with unterminated buffer.\n");
+        return -1;
+    }
+
+    p = dht_memmem(buf, buflen, "d1:a", 4);
+    if (!p) {
+        debugf("put_find_v: Missing 'a' key.\n");
+        return -1;
+    }
+    pp = find_end(p + 4, buf + buflen);
+    if (pp) {
+        debug_printable(p, pp - p);
+    } else {
+        debug_printable(p, buflen + p - buf);
+    }
+
+    return 0;
 }
 
 static int
