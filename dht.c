@@ -1339,6 +1339,8 @@ dht_search(const unsigned char *id, int port, int af,
     if(sr->numnodes < SEARCH_NODES)
         insert_search_bucket(find_bucket(myid, af), sr);
 
+    debugf("Starting search with (%d) nodes\n", sr->numnodes);
+
     search_step(sr, callback, closure);
     search_time = now.tv_sec;
     return 1;
