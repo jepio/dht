@@ -2823,17 +2823,38 @@ int dht_put(const char *str, size_t size, dht_callback *cb, void *closure)
     }
     unsigned char hash[SHA_DIGEST_LENGTH];
     SHA1((unsigned char*)str, size, hash);
+
+    struct search sr = {};
+    sr.tid  = search_id++;
+    sr.af = AF_INET;
+    sr.step_time = -1;
+    memcpy(sr.id, hash, 20);
+    sr.port = 0;
+    sr.done = 0;
+    sr.numnodes = 0;
+    sr.next = NULL;
     struct bucket *b = find_bucket(hash, AF_INET);
+    if (!b) {
+        debugf("dht_put: failed to find a bucket\n");
+        return -1;
+    }
+
+    insert_search_bucket(b, &sr);
+    if (sr.numnodes < SEARCH_NODES) {
+        struct bucket *p = previous_bucket(b);
+        if (b->next)
+            insert_search_bucket(b->next, &sr);
+        if (p)
+            insert_search_bucket(p, &sr);
+    }
+    if (sr.numnodes < SEARCH_NODES)
+        insert_search_bucket(find_bucket(myid, AF_INET), &sr);
+
+    debugf("Starting dht_put with (%d) nodes\n", sr.numnodes);
+
     int sent = 0;
-
-    if (b == NULL)
-        return 0;
-
-    int sent_prev = 0, sent_next = 0, sent_mine = 0;
-    struct node *n = b->nodes;
-
-send_more:
-    while (n && sent < SEARCH_NODES) {
+    while (sent < sr.numnodes) {
+        struct search_node *n = &sr.nodes[sent];
         char buf[1500];
         unsigned char t[TOKEN_SIZE];
         make_token((struct sockaddr *)&n->ss, 0, t);
@@ -2853,29 +2874,7 @@ send_more:
             debugf("dht_put: dht_send error: %d\n", errno);
         }
 
-        n = n->next;
         sent++;
-    }
-    if (sent < SEARCH_NODES && !sent_prev) {
-        struct bucket *bb = previous_bucket(b);
-        sent_prev = 1;
-        if (bb) {
-            n = bb->nodes;
-            goto send_more;
-        }
-    }
-    if (sent < SEARCH_NODES && !sent_next) {
-        struct bucket *bb = b->next;
-        sent_next = 1;
-        if (bb) {
-            n = bb->nodes;
-            goto send_more;
-        }
-    }
-    if (sent < SEARCH_NODES && !sent_mine) {
-        struct bucket *bb = find_bucket(myid, AF_INET);
-        n = bb->nodes;
-        goto send_more;
     }
     return 0;
 
