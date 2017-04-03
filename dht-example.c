@@ -377,8 +377,11 @@ main(int argc, char **argv)
            Since peers expire announced data after 30 minutes, it's a good
            idea to reannounce every 28 minutes or so. */
         if(searching) {
-            if(s >= 0)
+            const char *h = "10:helloworld";
+            if(s >= 0) {
+                dht_put(h, strlen(h), callback, NULL);
                 dht_search(hash, 0, AF_INET, callback, NULL);
+            }
             if(s6 >= 0)
                 dht_search(hash, 0, AF_INET6, callback, NULL);
             searching = 0;

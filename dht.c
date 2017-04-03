@@ -36,6 +36,8 @@ THE SOFTWARE.
 #include <errno.h>
 #include <string.h>
 #include <stdarg.h>
+#include <ctype.h>
+#include <openssl/sha.h>
 
 #if !defined(_WIN32) || defined(__MINGW32__)
 #include <sys/time.h>
@@ -2806,6 +2808,82 @@ send_error(const struct sockaddr *sa, int salen,
     errno = ENOSPC;
     return -1;
 }
+
+int dht_put(const char *str, size_t size, dht_callback *cb, void *closure)
+{
+
+    if (size > 1000) {
+        debugf("dht_put: too big value: %d.\n", (int)size);
+        return -1;
+    }
+
+    if (SHA_DIGEST_LENGTH != 20) {
+        debugf("dht_put: sha1 is not 20 bytes.\n");
+        return -1;
+    }
+    unsigned char hash[SHA_DIGEST_LENGTH];
+    SHA1((unsigned char*)str, size, hash);
+    struct bucket *b = find_bucket(hash, AF_INET);
+    int sent = 0;
+
+    if (b == NULL)
+        return 0;
+
+    int sent_prev = 0, sent_next = 0, sent_mine = 0;
+    struct node *n = b->nodes;
+
+send_more:
+    while (n && sent < SEARCH_NODES) {
+        char buf[1500];
+        unsigned char t[TOKEN_SIZE];
+        make_token((struct sockaddr *)&n->ss, 0, t);
+
+        int i = 0, rc;
+        rc = snprintf(buf + i, 1500 - i, "d1:ad2:id20:"); INC(i, rc, 1500);
+        COPY(buf, i, myid, 20, 1500);
+        rc = snprintf(buf + i, 1500 - i, "5:token%d:", TOKEN_SIZE);
+        INC(i, rc, 1500);
+        COPY(buf, i, t, TOKEN_SIZE, 1500);
+        rc = snprintf(buf + i, 1500 - i, "1:v"); INC(i, rc, 1500);
+        COPY(buf, i, str, size, 1500);
+        rc = snprintf(buf + i, 1500 - i, "e1:t5:put001:y1:q1:q3:pute");
+        INC(i, rc, 1500);
+
+        if (dht_send(buf, i, 0, (struct sockaddr*)&n->ss, n->sslen) < 0) {
+            debugf("dht_put: dht_send error: %d\n", errno);
+        }
+
+        n = n->next;
+        sent++;
+    }
+    if (sent < SEARCH_NODES && !sent_prev) {
+        struct bucket *bb = previous_bucket(b);
+        sent_prev = 1;
+        if (bb) {
+            n = bb->nodes;
+            goto send_more;
+        }
+    }
+    if (sent < SEARCH_NODES && !sent_next) {
+        struct bucket *bb = b->next;
+        sent_next = 1;
+        if (bb) {
+            n = bb->nodes;
+            goto send_more;
+        }
+    }
+    if (sent < SEARCH_NODES && !sent_mine) {
+        struct bucket *bb = find_bucket(myid, AF_INET);
+        n = bb->nodes;
+        goto send_more;
+    }
+    return 0;
+
+fail:
+    errno = ENOSPC;
+    return -1;
+}
+
 
 #undef CHECK
 #undef INC

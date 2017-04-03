@@ -1,5 +1,5 @@
-CFLAGS = -g -Wall
-LDLIBS = -lcrypt
+CFLAGS = -g -Wall -fsanitize=address
+LDLIBS = -lcrypt -lcrypto -fsanitize=address -static-libasan
 
 dht-example: dht-example.o dht.o
 
