@@ -3043,6 +3043,8 @@ static const unsigned char *skip_dict(const unsigned char *buf, const unsigned
     }
     if (p > end) {
         debugf("skip_dict: overflow.\n");
+        debug_printable(buf, end - buf);
+        debugf("\n");
         return NULL;
     }
 
@@ -3083,7 +3085,8 @@ static int put_find_v(const unsigned char *buf, int buflen,
         debugf("put_find_v: Missing 'a' key.\n");
         return -1;
     }
-    pp = skip_any(p + 4, buf + buflen);
+    p += 4;
+    pp = skip_any(p, buf + buflen);
     if (pp) {
         debug_printable(p, pp - p);
     } else {
