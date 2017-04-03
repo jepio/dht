@@ -3088,6 +3088,7 @@ static int put_find_v(const unsigned char *buf, int buflen,
     } else {
         debug_printable(p, buflen + p - buf);
     }
+    debugf("\n");
 
     return 0;
 }
